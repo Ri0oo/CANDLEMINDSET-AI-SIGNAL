@@ -1,0 +1,6 @@
+{
+  "name": "CANDLE MINDSET AI SIGNAL",
+  "description": "Premium AI-Powered Quotex Screenshot Signal Generator with automatic market recognition and entry timing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
