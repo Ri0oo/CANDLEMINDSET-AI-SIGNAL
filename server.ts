@@ -1,13 +1,11 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const currentDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -31,10 +29,16 @@ import { createWorker } from 'tesseract.js';
 let ocrWorkerPromise: Promise<any> | null = null;
 async function getOcrWorker() {
   if (!ocrWorkerPromise) {
-    ocrWorkerPromise = createWorker('eng');
+    ocrWorkerPromise = createWorker('eng').then((w) => {
+      console.log('[CANDLE MINDSET] OCR Worker primed and ready');
+      return w;
+    });
   }
   return ocrWorkerPromise;
 }
+
+// Pre-warm Tesseract worker on server boot
+getOcrWorker().catch((err) => console.warn('[OCR Warmup note]:', err));
 
 function parseTimeToSeconds(timeStr: string): number {
   const parts = timeStr.split(':').map(Number);
@@ -100,38 +104,51 @@ function extractMarketFromOcr(ocrText: string, fileName?: string | null): string
   // 1. Check if fileName has an explicit market pair
   if (fileName) {
     const fileMatch = fileName.match(
-      /\b(USD|EUR|GBP|AUD|NZD|CAD|CHF|JPY|XAU|BTC|ETH|BRL|INR|IDR)[\/_\s-]{1,2}(IDR|INR|BDT|PKR|USD|JPY|GBP|EUR|CAD|CHF|BRL|TRY|PHP|ZAR|NGN|MXN|EGP)\b/i
+      /\b(USD|EUR|GBP|AUD|NZD|CAD|CHF|JPY|XAU|BTC|ETH|BRL|INR|IDR|BDT|PKR)[\/_\s-]{1,2}(IDR|INR|BDT|PKR|USD|JPY|GBP|EUR|CAD|CHF|BRL|TRY|PHP|ZAR|NGN|MXN|EGP)\b/i
     );
     if (fileMatch) {
       const p1 = fileMatch[1].toUpperCase();
       const p2 = fileMatch[2].toUpperCase();
-      const hasOtc = /\bOTC\b|\(OTC\)/i.test(fileName);
+      const hasOtc = /\bOTC\b|\(OTC\)/i.test(fileName) || ['BRL', 'INR', 'IDR', 'BDT', 'PKR'].includes(p2);
       return hasOtc ? `${p1}/${p2} (OTC)` : `${p1}/${p2}`;
     }
   }
 
   // 2. Extract from OCR text of the Quotex screenshot
   if (ocrText) {
-    // Match flexible currency pairs with optional spaces: USD/IDR, USD / BRL, AUD/CHF, etc.
-    const pairRegex = /\b([A-Z]{3})\s*[\/\\_|-]\s*([A-Z]{3})\b/i;
+    // Standard currency pair: USD/BRL, USD/IDR, AUD/CHF, EUR/USD, etc.
+    const pairRegex = /\b(USD|EUR|GBP|AUD|NZD|CAD|CHF|JPY|XAU|BTC|ETH|BRL|INR|IDR|BDT|PKR)[\s\/\\|_I1-]{1,3}(IDR|INR|BDT|PKR|USD|JPY|GBP|EUR|CAD|CHF|BRL|TRY|PHP|ZAR|NGN|MXN|EGP)\b/i;
     const match = ocrText.match(pairRegex);
     if (match) {
       const p1 = match[1].toUpperCase();
       const p2 = match[2].toUpperCase();
       const surrounding = ocrText.slice(Math.max(0, match.index! - 20), match.index! + 35);
-      const hasOtc = /\bOTC\b|\(OTC\)|\(0TC\)/i.test(surrounding);
+      const hasOtc = /\bOTC\b|\(OTC\)|\(0TC\)/i.test(surrounding) || ['BRL', 'INR', 'IDR', 'BDT', 'PKR'].includes(p2);
       return hasOtc ? `${p1}/${p2} (OTC)` : `${p1}/${p2}`;
     }
 
-    // Joined currency pair without separator: USDIDR, USDBRL, EURUSD, etc.
-    const joinedRegex = /\b(USD|EUR|GBP|AUD|NZD|CAD|CHF|JPY|XAU|BTC|ETH)(IDR|INR|BDT|PKR|USD|JPY|GBP|EUR|CAD|CHF|BRL|TRY|PHP|ZAR|NGN|MXN|EGP)\b/i;
+    // Joined currency pair without separator: USDBRL, USDIDR, EURUSD, etc.
+    const joinedRegex = /\b(USD|EUR|GBP|AUD|NZD|CAD|CHF|JPY)(IDR|INR|BDT|PKR|USD|JPY|GBP|EUR|CAD|CHF|BRL|TRY|PHP)\b/i;
     const match2 = ocrText.match(joinedRegex);
     if (match2) {
       const p1 = match2[1].toUpperCase();
       const p2 = match2[2].toUpperCase();
       const surrounding = ocrText.slice(Math.max(0, match2.index! - 20), match2.index! + 35);
-      const hasOtc = /\bOTC\b|\(OTC\)|\(0TC\)/i.test(surrounding);
+      const hasOtc = /\bOTC\b|\(OTC\)|\(0TC\)/i.test(surrounding) || ['BRL', 'INR', 'IDR', 'BDT', 'PKR'].includes(p2);
       return hasOtc ? `${p1}/${p2} (OTC)` : `${p1}/${p2}`;
+    }
+
+    // Single currency code followed by payout percentage (e.g. 'BRL... 77%', 'IDR.. 93%')
+    const singleRegex = /\b(BRL|IDR|INR|BDT|PKR|CHF)\b.{0,15}\d{2}%/i;
+    const match3 = ocrText.match(singleRegex);
+    if (match3) {
+      const curr = match3[1].toUpperCase();
+      if (curr === 'BRL') return 'USD/BRL (OTC)';
+      if (curr === 'IDR') return 'USD/IDR (OTC)';
+      if (curr === 'BDT') return 'USD/BDT (OTC)';
+      if (curr === 'PKR') return 'USD/PKR (OTC)';
+      if (curr === 'INR') return 'USD/INR (OTC)';
+      if (curr === 'CHF') return 'AUD/CHF (OTC)';
     }
 
     if (/\b(GOLD|XAU)\b/i.test(ocrText)) return 'Gold (XAU/USD)';
@@ -139,7 +156,7 @@ function extractMarketFromOcr(ocrText: string, fileName?: string | null): string
     if (/\b(ETHEREUM|ETH)\b/i.test(ocrText)) return 'ETH/USD';
   }
 
-  return 'USD/INR';
+  return 'USD/BRL (OTC)';
 }
 
 function extractTimeFromFileName(fileName?: string | null): string | null {
@@ -168,7 +185,7 @@ function extractTimeFromFileName(fileName?: string | null): string | null {
 // Quotex 24-Hour Timer Verification Endpoint
 app.post('/api/verify-timer', async (req, res) => {
   try {
-    const { imageBase64, fileName, timestamp = Date.now() } = req.body;
+    const { imageBase64, headerBase64, fileName, timestamp = Date.now() } = req.body;
     if (!imageBase64 || typeof imageBase64 !== 'string' || imageBase64.trim() === '') {
       return res.status(400).json({
         success: false,
@@ -182,6 +199,12 @@ app.post('/api/verify-timer', async (req, res) => {
       cleanBase64 = dataUriMatch[2];
     }
 
+    let cleanHeaderBase64 = headerBase64;
+    if (headerBase64 && typeof headerBase64 === 'string') {
+      const hMatch = headerBase64.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+      if (hMatch) cleanHeaderBase64 = hMatch[2];
+    }
+
     let detectedMarket = extractMarketFromOcr('', fileName);
     const matches: string[] = [];
 
@@ -191,20 +214,25 @@ app.post('/api/verify-timer', async (req, res) => {
       matches.push(fileTime);
     }
 
-    // 2. OCR inspection with 3.5s timeout safety
+    // 2. High-precision OCR inspection with 12s timeout safety for Render
     try {
-      const imgBuf = Buffer.from(cleanBase64, 'base64');
+      // Prioritize crisp header crop if available (10x faster and cleaner font)
+      const primaryBase64 = cleanHeaderBase64 || cleanBase64;
+      const imgBuf = Buffer.from(primaryBase64, 'base64');
       const ocrPromise = (async () => {
         const worker = await getOcrWorker();
         const ocrResult = await worker.recognize(imgBuf);
         return ocrResult?.data?.text || '';
       })();
 
-      const timeoutPromise = new Promise<string>((resolve) => setTimeout(() => resolve(''), 3500));
+      const timeoutPromise = new Promise<string>((resolve) => setTimeout(() => resolve(''), 12000));
       const ocrText = await Promise.race([ocrPromise, timeoutPromise]);
 
       if (ocrText) {
-        detectedMarket = extractMarketFromOcr(ocrText, fileName);
+        const foundMkt = extractMarketFromOcr(ocrText, fileName);
+        if (foundMkt) {
+          detectedMarket = foundMkt;
+        }
 
         const flexibleRegex = /\b([01]?[0-9]|2[0-3])\s*[:.-]\s*([0-5][0-9])(?:\s*[:.-]\s*([0-5][0-9]))?\b/g;
         let m;

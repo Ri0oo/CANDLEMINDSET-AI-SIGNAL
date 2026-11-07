@@ -81,6 +81,31 @@ export default function App() {
     setIsAuthenticated(false);
   };
 
+  // Crisp crop of Quotex top 35% header for razor-sharp OCR recognition
+  const createQuotexHeaderCrop = (src: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const cropHeight = Math.round(img.height * 0.35);
+        const targetWidth = Math.min(img.width, 1100);
+        const scale = targetWidth / img.width;
+        canvas.width = targetWidth;
+        canvas.height = Math.round(cropHeight * scale);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(src);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, img.width, cropHeight, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.90));
+      };
+      img.onerror = () => resolve(src);
+      img.src = src;
+    });
+  };
+
   // Fast client-side image downsampler for near-instant OCR verification (< 400ms)
   const downsampleForVerification = (src: string, maxDim = 850): Promise<string> => {
     return new Promise((resolve) => {
@@ -150,16 +175,20 @@ export default function App() {
     });
 
     try {
-      const ocrPayload = await downsampleForVerification(dataUrl);
+      const [ocrPayload, headerBase64] = await Promise.all([
+        downsampleForVerification(dataUrl),
+        createQuotexHeaderCrop(dataUrl),
+      ]);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 14000);
 
       const res = await fetch('/api/verify-timer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageBase64: ocrPayload,
+          headerBase64,
           fileName,
           timestamp: Date.now(),
         }),
@@ -171,7 +200,7 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
-          const finalMkt = data.detectedMarket || initialMarket || detectedMarket || 'USD/BRL (OTC)';
+          const finalMkt = data.detectedMarket || initialMarket || 'USD/BRL (OTC)';
           setDetectedMarket(finalMkt);
           setTimerStatus({
             isVerifying: false,
@@ -307,7 +336,7 @@ export default function App() {
     const entryCalc = calculateDhakaNextMinute(clickTimestamp);
 
     try {
-      let finalMarket = detectedMarket || 'USD/INR';
+      let finalMarket = detectedMarket || 'USD/BRL (OTC)';
       let finalDirection: 'UP' | 'DOWN' = 'UP';
       let finalConfidence = 91;
 
