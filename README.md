@@ -45,10 +45,15 @@ Futuristic Apple-inspired **Nebula Liquid Glass** Quotex Screenshot Trading Sign
 
 This application is standard full-stack Node.js (React + Vite + Express). You can deploy it directly from your GitHub repository to:
 
-### 1. Render.com
+### 1. Render.com Deployment (Important)
+- In Render dashboard, click **"New"** -> **"Web Service"** (do NOT choose "Static Site", because the app uses backend APIs).
+- Connect your GitHub repository.
+- **Language / Runtime**: `Node`
 - **Build Command**: `npm install && npm run build`
-- **Start Command**: `npm run start`
-- **Environment**: Node
+- **Start Command**: `npm start`
+- **Instance Type**: Free or Starter
+- Click **"Deploy Web Service"**!
+*(Note: If you already created a Static Site on Render, simply create a new "Web Service" instead!)*
 
 ### 2. Railway.app
 - Connect your GitHub repo. Railway auto-detects `package.json` and runs `npm run build` and `npm start`.

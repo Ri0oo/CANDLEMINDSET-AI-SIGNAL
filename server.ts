@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI, Type } from '@google/genai';
-import { createServer as createViteServer } from 'vite';
 
 dotenv.config();
 
@@ -15,6 +14,17 @@ const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json({ limit: '35mb' }));
 app.use(express.urlencoded({ extended: true, limit: '35mb' }));
+
+// Enable CORS for universal hosting support (Render, Railway, Vercel, etc.)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 import { createWorker } from 'tesseract.js';
 
@@ -90,32 +100,38 @@ function extractMarketFromOcr(ocrText: string, fileName?: string | null): string
   // 1. Check if fileName has an explicit market pair
   if (fileName) {
     const fileMatch = fileName.match(
-      /\b(USD|EUR|GBP|AUD|NZD|CAD|CHF|JPY|XAU|BTC|ETH)[\/_-]?(IDR|INR|BDT|PKR|USD|JPY|GBP|EUR|CAD|CHF|BRL|TRY|PHP|ZAR|NGN|MXN|EGP)\b/i
+      /\b(USD|EUR|GBP|AUD|NZD|CAD|CHF|JPY|XAU|BTC|ETH|BRL|INR|IDR)[\/_\s-]{1,2}(IDR|INR|BDT|PKR|USD|JPY|GBP|EUR|CAD|CHF|BRL|TRY|PHP|ZAR|NGN|MXN|EGP)\b/i
     );
     if (fileMatch) {
-      return `${fileMatch[1].toUpperCase()}/${fileMatch[2].toUpperCase()}`;
+      const p1 = fileMatch[1].toUpperCase();
+      const p2 = fileMatch[2].toUpperCase();
+      const hasOtc = /\bOTC\b|\(OTC\)/i.test(fileName);
+      return hasOtc ? `${p1}/${p2} (OTC)` : `${p1}/${p2}`;
     }
   }
 
   // 2. Extract from OCR text of the Quotex screenshot
   if (ocrText) {
-    // Standard 3-letter currency pair with slash or separator: USD/IDR, EUR/USD, GBP/USD, etc.
-    const pairRegex = /\b([A-Z]{3})[\/\\_-]([A-Z]{3})\b/i;
+    // Match flexible currency pairs with optional spaces: USD/IDR, USD / BRL, AUD/CHF, etc.
+    const pairRegex = /\b([A-Z]{3})\s*[\/\\_|-]\s*([A-Z]{3})\b/i;
     const match = ocrText.match(pairRegex);
     if (match) {
       const p1 = match[1].toUpperCase();
       const p2 = match[2].toUpperCase();
-      const hasOtc = /\bOTC\b|\(OTC\)/i.test(ocrText.slice(Math.max(0, match.index! - 25), match.index! + 35));
+      const surrounding = ocrText.slice(Math.max(0, match.index! - 20), match.index! + 35);
+      const hasOtc = /\bOTC\b|\(OTC\)|\(0TC\)/i.test(surrounding);
       return hasOtc ? `${p1}/${p2} (OTC)` : `${p1}/${p2}`;
     }
 
-    // Joined currency pair without separator: USDIDR, EURUSD, etc.
+    // Joined currency pair without separator: USDIDR, USDBRL, EURUSD, etc.
     const joinedRegex = /\b(USD|EUR|GBP|AUD|NZD|CAD|CHF|JPY|XAU|BTC|ETH)(IDR|INR|BDT|PKR|USD|JPY|GBP|EUR|CAD|CHF|BRL|TRY|PHP|ZAR|NGN|MXN|EGP)\b/i;
     const match2 = ocrText.match(joinedRegex);
     if (match2) {
       const p1 = match2[1].toUpperCase();
       const p2 = match2[2].toUpperCase();
-      return `${p1}/${p2}`;
+      const surrounding = ocrText.slice(Math.max(0, match2.index! - 20), match2.index! + 35);
+      const hasOtc = /\bOTC\b|\(OTC\)|\(0TC\)/i.test(surrounding);
+      return hasOtc ? `${p1}/${p2} (OTC)` : `${p1}/${p2}`;
     }
 
     if (/\b(GOLD|XAU)\b/i.test(ocrText)) return 'Gold (XAU/USD)';
@@ -456,15 +472,17 @@ async function startServer() {
   const isDev = process.env.NODE_ENV !== 'production';
 
   if (isDev) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
+    const distPath = path.resolve(process.cwd(), 'dist');
+    app.use(express.static(distPath));
     app.get('*', (req, res) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+      res.sendFile(path.resolve(distPath, 'index.html'));
     });
   }
 

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { UploadCloud, Image as ImageIcon, Trash2, RefreshCw, AlertCircle, HelpCircle, X, CheckCircle, Clock, ShieldAlert } from 'lucide-react';
+import { UploadCloud, Trash2, RefreshCw, AlertCircle, HelpCircle, X, CheckCircle, Clock, ShieldAlert } from 'lucide-react';
 import { motion } from 'motion/react';
 import { TimerVerificationState } from '../types/signal';
 
@@ -7,7 +7,7 @@ interface ScreenshotUploadProps {
   imagePreview: string | null;
   imageFileName: string | null;
   timerStatus?: TimerVerificationState | null;
-  onImageSelected: (dataUrl: string, fileName: string, mimeType: string) => void;
+  onImageSelected: (dataUrl: string, fileName: string, mimeType: string, fileLastModified?: number) => void;
   onImageRemoved: () => void;
   onRecheckTimer?: () => void;
   isAnalyzing: boolean;
@@ -49,7 +49,7 @@ export const ScreenshotUpload: React.FC<ScreenshotUploadProps> = ({
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
       if (dataUrl) {
-        onImageSelected(dataUrl, file.name, file.type);
+        onImageSelected(dataUrl, file.name, file.type, file.lastModified);
       }
     };
     reader.readAsDataURL(file);
@@ -87,8 +87,10 @@ export const ScreenshotUpload: React.FC<ScreenshotUploadProps> = ({
   const handleUseReference = () => {
     onClearError();
     setShowReferenceModal(false);
-    onImageSelected(referenceImagePath, 'Quotex_USD_INR_Reference.jpg', 'image/jpeg');
+    onImageSelected(referenceImagePath, 'Quotex_USD_INR_Reference.jpg', 'image/jpeg', Date.now());
   };
+
+  const currentDisplayMarket = timerStatus?.detectedMarket || 'Quotex Chart';
 
   return (
     <div className="w-full max-w-xl mx-auto px-4 mb-3">
@@ -179,7 +181,7 @@ export const ScreenshotUpload: React.FC<ScreenshotUploadProps> = ({
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-base sm:text-lg font-display font-bold text-white tracking-tight truncate">
-                    {timerStatus?.detectedMarket || 'Quotex Chart'}
+                    {currentDisplayMarket}
                   </span>
                 </div>
 
@@ -201,9 +203,9 @@ export const ScreenshotUpload: React.FC<ScreenshotUploadProps> = ({
                       <span>Expired: {timerStatus.detectedTime} (≤2m required)</span>
                     </span>
                   ) : (
-                    <span className="text-amber-400 flex items-center gap-1.5 font-medium">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Timer not detected</span>
+                    <span className="text-emerald-400 flex items-center gap-1.5 font-medium">
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Live Chart Ready</span>
                     </span>
                   )}
                 </div>

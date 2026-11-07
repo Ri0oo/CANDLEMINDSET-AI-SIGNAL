@@ -80,7 +80,8 @@ export function getLiveDhakaTime(): string {
  */
 export function checkDhakaScreenshotExpiration(
   screenshotTimeStr: string,
-  nowTimestamp: number = Date.now()
+  nowTimestamp: number = Date.now(),
+  fileLastModified?: number
 ): {
   isExpired: boolean;
   currentDhakaTime: string;
@@ -107,18 +108,34 @@ export function checkDhakaScreenshotExpiration(
   const [nowH, nowM, nowS] = currentDhakaTime.split(':').map(Number);
   const nowDhakaSeconds = nowH * 3600 + nowM * 60 + nowS;
 
-  // Circular difference handling 24h midnight wrap
-  let diffSec = nowDhakaSeconds - screenshotSeconds;
-  if (diffSec < -43200) diffSec += 86400;
-  if (diffSec > 43200) diffSec -= 86400;
+  const nowDate = new Date(nowTimestamp);
+  const nowUtcSeconds = nowDate.getUTCHours() * 3600 + nowDate.getUTCMinutes() * 60 + nowDate.getUTCSeconds();
+  const nowLocalSeconds = nowDate.getHours() * 3600 + nowDate.getMinutes() * 60 + nowDate.getSeconds();
 
-  let diffMin = (nowH * 60 + nowM) - (sH * 60 + sM);
-  if (diffMin < -720) diffMin += 1440;
-  if (diffMin > 720) diffMin -= 1440;
+  const getSecDiff = (currentSec: number, targetSec: number) => {
+    let diff = Math.abs(currentSec - targetSec);
+    if (diff > 43200) diff = 86400 - diff;
+    return diff;
+  };
 
-  // Expired if current Dhaka minute is >= screenshot minute + 3 (e.g. 1:25 -> 1:28)
-  // or diffSec >= 180 (3 minutes) or screenshot is from the future (diffSec < -120)
-  const isExpired = diffMin >= 3 || diffSec >= 180 || diffSec < -120;
+  const diffDhaka = getSecDiff(nowDhakaSeconds, screenshotSeconds);
+  const diffUtc = getSecDiff(nowUtcSeconds, screenshotSeconds);
+  const diffLocal = getSecDiff(nowLocalSeconds, screenshotSeconds);
+
+  let bestDiffSec = Math.min(diffDhaka, diffUtc, diffLocal);
+
+  // If file was modified on user's device very recently (e.g. Android screenshot taken seconds ago)
+  if (fileLastModified && fileLastModified > 0) {
+    const elapsedFromModified = Math.max(0, Math.round((nowTimestamp - fileLastModified) / 1000));
+    if (elapsedFromModified < bestDiffSec) {
+      bestDiffSec = elapsedFromModified;
+    }
+  }
+
+  const diffMin = Math.floor(bestDiffSec / 60);
+
+  // Fresh if within 180 seconds (< 3 minutes window)
+  const isExpired = bestDiffSec >= 180;
 
   // Target expiry time (screenshot minute + 3)
   const expTotalMin = (sH * 60 + sM + 3) % 1440;
@@ -126,13 +143,13 @@ export function checkDhakaScreenshotExpiration(
   const expM = String(expTotalMin % 60).padStart(2, '0');
   const expireTimeFormatted = `${expH}:${expM}`;
 
-  const minStr = Math.floor(Math.abs(diffSec) / 60);
-  const secStr = Math.abs(diffSec) % 60;
+  const minStr = Math.floor(bestDiffSec / 60);
+  const secStr = bestDiffSec % 60;
 
   return {
     isExpired,
     currentDhakaTime,
-    diffSeconds: diffSec,
+    diffSeconds: bestDiffSec,
     diffMinutes: diffMin,
     expireTimeFormatted,
     message: isExpired

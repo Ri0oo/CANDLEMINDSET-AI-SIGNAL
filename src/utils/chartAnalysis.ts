@@ -21,6 +21,8 @@ export interface ChartValidationResult {
 }
 
 const COMMON_MARKETS = [
+  { match: /USD[\/_-]?BRL/i, name: 'USD/BRL' },
+  { match: /AUD[\/_-]?CHF/i, name: 'AUD/CHF' },
   { match: /USD[\/_-]?IDR/i, name: 'USD/IDR' },
   { match: /USD[\/_-]?INR/i, name: 'USD/INR' },
   { match: /USD[\/_-]?BDT/i, name: 'USD/BDT' },
@@ -29,27 +31,32 @@ const COMMON_MARKETS = [
   { match: /GBP[\/_-]?USD/i, name: 'GBP/USD' },
   { match: /USD[\/_-]?JPY/i, name: 'USD/JPY' },
   { match: /AUD[\/_-]?USD/i, name: 'AUD/USD' },
+  { match: /NZD[\/_-]?USD/i, name: 'NZD/USD' },
   { match: /EUR[\/_-]?GBP/i, name: 'EUR/GBP' },
   { match: /EUR[\/_-]?JPY/i, name: 'EUR/JPY' },
+  { match: /CAD[\/_-]?CHF/i, name: 'CAD/CHF' },
+  { match: /USD[\/_-]?CAD/i, name: 'USD/CAD' },
+  { match: /GBP[\/_-]?JPY/i, name: 'GBP/JPY' },
   { match: /XAU[\/_-]?USD|GOLD/i, name: 'Gold (XAU/USD)' },
   { match: /BTC[\/_-]?USD|BITCOIN/i, name: 'BTC/USD' },
   { match: /ETH[\/_-]?USD|ETHEREUM/i, name: 'ETH/USD' },
-  { match: /USD[\/_-]?BRL/i, name: 'USD/BRL' },
   { match: /USD[\/_-]?TRY/i, name: 'USD/TRY' },
   { match: /USD[\/_-]?PHP/i, name: 'USD/PHP' },
 ];
 
 export function detectMarketName(fileName?: string | null, overrideMarket?: string | null): string {
   if (overrideMarket) return overrideMarket;
-  if (!fileName) return 'USD/INR';
+  if (!fileName) return 'USD/BRL (OTC)';
+
+  const hasOtc = /\bOTC\b|\(OTC\)/i.test(fileName);
 
   for (const item of COMMON_MARKETS) {
     if (item.match.test(fileName)) {
-      return item.name;
+      return hasOtc ? `${item.name} (OTC)` : item.name;
     }
   }
 
-  return 'USD/INR';
+  return 'USD/BRL (OTC)';
 }
 
 /**
