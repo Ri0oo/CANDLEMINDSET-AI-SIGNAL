@@ -103,43 +103,44 @@ export const ScreenshotUpload: React.FC<ScreenshotUploadProps> = ({
       />
 
       {!imagePreview ? (
-        /* 1. LIQUID GLASS UPLOAD ZONE */
+        /* 1. APPLE NEBULA LIQUID GLASS UPLOAD CARD */
         <div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`cursor-pointer liquid-glass-card rounded-2xl p-5 sm:p-6 flex flex-col items-center justify-center text-center transition-all duration-300 group relative overflow-hidden ${
+          className={`cursor-pointer glass-panel rounded-3xl p-7 sm:p-9 flex flex-col items-center justify-center text-center transition-all duration-300 group relative overflow-hidden ${
             isDragging
-              ? 'border-cyan-400 bg-cyan-950/40 shadow-[0_0_30px_rgba(6,182,212,0.4)] scale-[1.01]'
-              : 'hover:border-cyan-400/50 hover:shadow-[0_0_25px_rgba(6,182,212,0.2)]'
+              ? 'border-purple-400 bg-purple-950/30 shadow-[0_0_40px_rgba(168,85,247,0.35)] scale-[1.01]'
+              : 'hover:border-white/20 hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)]'
           }`}
         >
-          {/* Subtle light shimmer sweep */}
+          {/* Subtle cosmic light reflection */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-12 animate-shimmer-sweep" />
           </div>
 
-          <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center text-cyan-300 group-hover:scale-110 transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.3)] mb-2.5">
-            <UploadCloud className="w-6 h-6 stroke-[2.2]" />
+          <div className="w-14 h-14 rounded-2xl glass-panel-subtle border border-white/15 flex items-center justify-center text-purple-200 group-hover:scale-105 group-hover:text-white transition-all duration-300 shadow-[0_0_20px_rgba(168,85,247,0.2)] mb-3.5">
+            <UploadCloud className="w-7 h-7 stroke-[1.8]" />
           </div>
 
-          <h3 className="text-sm sm:text-base font-extrabold text-white group-hover:text-cyan-300 transition font-terminal tracking-wide text-glow-white mb-0.5">
+          <h3 className="text-base sm:text-lg font-display font-bold text-white group-hover:text-purple-100 transition tracking-tight mb-1">
             Upload Quotex Screenshot
           </h3>
 
-          <p className="text-xs text-slate-400 font-terminal mb-3.5">
-            M1 chart with candlesticks (≤2m live)
+          <p className="text-xs text-slate-400 font-sans mb-5">
+            Supported formats: PNG, JPG or WEBP
           </p>
 
-          <div className="flex items-center gap-2">
-            <motion.span
+          <div className="flex items-center gap-2.5">
+            <motion.button
               whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-terminal font-bold text-xs uppercase shadow-md transition"
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              className="glass-button-silver px-6 py-2.5 rounded-2xl font-display font-bold text-xs sm:text-sm tracking-wide shadow-lg cursor-pointer"
             >
-              Browse
-            </motion.span>
+              Choose File
+            </motion.button>
 
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -149,58 +150,58 @@ export const ScreenshotUpload: React.FC<ScreenshotUploadProps> = ({
                 e.stopPropagation();
                 setShowReferenceModal(true);
               }}
-              className="px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-700/80 transition flex items-center gap-1 text-xs font-terminal cursor-pointer"
+              className="px-3.5 py-2.5 rounded-2xl glass-panel-subtle text-slate-400 hover:text-white border border-white/10 transition flex items-center gap-1.5 text-xs font-sans cursor-pointer"
               title="View format guide"
             >
-              <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
+              <HelpCircle className="w-3.5 h-3.5 text-purple-300" />
               <span>Guide</span>
             </motion.button>
           </div>
         </div>
       ) : (
-        /* 2. LIQUID GLASS LOADED SCREENSHOT PREVIEW */
-        <div className="liquid-glass-card rounded-2xl p-3.5 sm:p-4 border border-cyan-500/30 shadow-2xl relative overflow-hidden">
-          <div className="flex items-center justify-between gap-3">
+        /* 2. LOADED SCREENSHOT PREVIEW CARD */
+        <div className="glass-panel rounded-3xl p-4 sm:p-5 border border-white/15 shadow-2xl relative overflow-hidden">
+          <div className="flex items-center justify-between gap-3.5">
             {/* Left: Thumbnail Preview */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-14 h-16 sm:w-16 sm:h-20 rounded-xl bg-black border border-cyan-500/40 overflow-hidden shrink-0 flex items-center justify-center relative shadow-md">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-16 h-20 sm:w-20 sm:h-24 rounded-2xl bg-black/80 border border-white/20 overflow-hidden shrink-0 flex items-center justify-center relative shadow-lg">
                 <img
                   src={imagePreview}
                   alt="Quotex chart"
                   className="w-full h-full object-cover"
                 />
                 {isAnalyzing && (
-                  <div className="absolute inset-0 bg-cyan-500/25 animate-pulse" />
+                  <div className="absolute inset-0 bg-purple-500/25 animate-pulse" />
                 )}
               </div>
 
               {/* Middle: File & Timer Status */}
               <div className="min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm sm:text-base font-black text-cyan-300 font-terminal tracking-wider text-glow-cyan truncate">
-                    {timerStatus?.detectedMarket || 'QUOTEX OTC'}
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-base sm:text-lg font-display font-bold text-white tracking-tight truncate">
+                    {timerStatus?.detectedMarket || 'Quotex Chart'}
                   </span>
                 </div>
 
-                {/* Simple High-Contrast Timer Status */}
-                <div className="font-terminal text-xs">
+                {/* Status Badge */}
+                <div className="text-xs font-sans">
                   {timerStatus?.isVerifying ? (
-                    <span className="text-cyan-300 flex items-center gap-1 animate-pulse">
-                      <Clock className="w-3 h-3 animate-spin" />
-                      <span>Checking timer...</span>
+                    <span className="text-purple-300 flex items-center gap-1.5 animate-pulse font-medium">
+                      <Clock className="w-3.5 h-3.5 animate-spin" />
+                      <span>Verifying timer...</span>
                     </span>
                   ) : timerStatus?.isWithin2Minutes ? (
-                    <span className="text-emerald-400 flex items-center gap-1 font-bold">
+                    <span className="text-emerald-400 flex items-center gap-1.5 font-medium">
                       <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Timer: {timerStatus.detectedTime} (Live ✅)</span>
+                      <span>Live verified: {timerStatus.detectedTime}</span>
                     </span>
                   ) : timerStatus?.timerFound ? (
-                    <span className="text-rose-400 flex items-center gap-1 font-bold">
+                    <span className="text-rose-400 flex items-center gap-1.5 font-medium">
                       <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
-                      <span>Expired: {timerStatus.detectedTime} ❌</span>
+                      <span>Expired: {timerStatus.detectedTime} (≤2m required)</span>
                     </span>
                   ) : (
-                    <span className="text-amber-400 flex items-center gap-1">
+                    <span className="text-amber-400 flex items-center gap-1.5 font-medium">
                       <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
                       <span>Timer not detected</span>
                     </span>
@@ -210,14 +211,14 @@ export const ScreenshotUpload: React.FC<ScreenshotUploadProps> = ({
             </div>
 
             {/* Right: Quick actions with motion */}
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.94 }}
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isAnalyzing}
-                className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-cyan-300 border border-slate-700/80 transition disabled:opacity-50 flex items-center gap-1 text-xs font-terminal cursor-pointer shadow-md"
+                className="px-3 py-2 rounded-xl glass-panel-subtle hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition disabled:opacity-50 flex items-center gap-1.5 text-xs font-sans cursor-pointer"
                 title="Replace screenshot"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -230,11 +231,11 @@ export const ScreenshotUpload: React.FC<ScreenshotUploadProps> = ({
                 type="button"
                 onClick={onImageRemoved}
                 disabled={isAnalyzing}
-                className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-rose-950/50 hover:bg-rose-900/70 text-rose-300 hover:text-white border border-rose-500/40 transition disabled:opacity-50 flex items-center gap-1 text-xs font-terminal cursor-pointer shadow-md"
+                className="px-3 py-2 rounded-xl glass-panel-subtle hover:bg-rose-950/40 text-rose-300 hover:text-rose-200 border border-rose-500/30 transition disabled:opacity-50 flex items-center gap-1.5 text-xs font-sans cursor-pointer"
                 title="Remove screenshot"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Delete</span>
+                <span className="hidden sm:inline">Remove</span>
               </motion.button>
             </div>
           </div>

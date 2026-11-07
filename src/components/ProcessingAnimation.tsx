@@ -16,19 +16,19 @@ export const ProcessingAnimation: React.FC<ProcessingAnimationProps> = ({
 
   return (
     <div className="w-full max-w-xl mx-auto px-4 mb-3 transition-all duration-300 animate-in fade-in">
-      <div className="liquid-glass-card rounded-2xl p-4 border border-cyan-500/50 shadow-2xl font-terminal">
-        <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
-          <div className="flex items-center gap-2 text-cyan-300 font-extrabold">
-            <RotateCw className="w-4 h-4 animate-spin text-cyan-400 shrink-0" />
-            <span className="truncate max-w-[240px] text-white text-glow-white">{stageInfo.label}</span>
+      <div className="glass-panel rounded-2xl p-4 border border-white/15 shadow-2xl">
+        <div className="flex items-center justify-between text-xs sm:text-sm mb-2.5">
+          <div className="flex items-center gap-2 text-purple-200 font-display font-medium">
+            <RotateCw className="w-4 h-4 animate-spin text-purple-300 shrink-0" />
+            <span className="truncate max-w-[240px] text-white">{stageInfo.label}</span>
           </div>
-          <span className="text-cyan-300 font-black text-glow-cyan text-sm">{progressPercent}%</span>
+          <span className="text-white font-terminal font-bold text-xs">{progressPercent}%</span>
         </div>
 
         {/* Progress bar */}
-        <div className="w-full h-2 bg-slate-950/90 rounded-full overflow-hidden border border-slate-700/80 shadow-inner">
+        <div className="w-full h-1.5 bg-black/60 rounded-full overflow-hidden border border-white/10">
           <div
-            className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-emerald-400 transition-all duration-200 shadow-[0_0_15px_#22d3ee]"
+            className="h-full bg-gradient-to-r from-purple-500 via-indigo-400 to-white transition-all duration-200 shadow-[0_0_12px_rgba(168,85,247,0.5)]"
             style={{ width: `${progressPercent}%` }}
           />
         </div>

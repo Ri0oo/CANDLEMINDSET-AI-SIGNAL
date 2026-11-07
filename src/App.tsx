@@ -80,6 +80,33 @@ export default function App() {
     setIsAuthenticated(false);
   };
 
+  // Fast client-side image downsampler for near-instant OCR verification (< 400ms)
+  const downsampleForVerification = (src: string, maxDim = 850): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        if (img.width <= maxDim && img.height <= maxDim) {
+          resolve(src);
+          return;
+        }
+        const scale = Math.min(maxDim / img.width, maxDim / img.height);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(src);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => resolve(src);
+      img.src = src;
+    });
+  };
+
   // Clear or handle image change with instant validation & Quotex 24h timer check
   const handleImageSelected = async (dataUrl: string, fileName: string) => {
     setImagePreview(dataUrl);
@@ -110,11 +137,13 @@ export default function App() {
     });
 
     try {
+      const ocrPayload = await downsampleForVerification(dataUrl);
+
       const res = await fetch('/api/verify-timer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageBase64: dataUrl,
+          imageBase64: ocrPayload,
           fileName,
           timestamp: Date.now(),
         }),
@@ -316,23 +345,37 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#05070D] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden">
-      {/* Dynamic ambient dark glow effects with floating animations */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-gradient-to-b from-cyan-600/10 via-indigo-600/5 to-transparent blur-[120px] rounded-full animate-float-1" />
-        <div className="absolute top-[35%] -left-32 w-80 h-80 bg-purple-600/10 blur-[100px] rounded-full animate-float-2" />
-        <div className="absolute top-[60%] -right-32 w-80 h-80 bg-cyan-600/10 blur-[100px] rounded-full animate-float-1" />
+    <div className="min-h-screen bg-[#030308] text-slate-100 flex flex-col font-sans selection:bg-purple-500/30 selection:text-purple-200 relative overflow-x-hidden">
+      {/* Fixed Cosmic Purple Nebula Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <img
+          src="/assets/purple_nebula_bg.jpg"
+          alt="Cosmic Nebula Background"
+          className="w-full h-full object-cover object-center opacity-85 select-none"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#030308]/70 via-[#030308]/55 to-[#030308]/90 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(168,85,247,0.18),transparent_65%)]" />
       </div>
 
       <div className="relative z-10 w-full flex-1 flex flex-col justify-between py-1">
         <div>
-          {/* 1. Sleek Minimal Header */}
+          {/* 1. Header */}
           <Header
             onLock={handleLock}
             onOpenCalculator={() => setIsCalculatorOpen(true)}
             liveDhakaTime={liveDhakaTime}
             isAnalyzing={isAnalyzing}
           />
+
+          {/* 2. Hero Section */}
+          <div className="w-full max-w-xl mx-auto px-4 pt-3 pb-1 text-center">
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-white tracking-tight drop-shadow-md">
+              Quotex Screenshot Analysis
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300 font-sans mt-1">
+              Upload your chart and get AI signal
+            </p>
+          </div>
 
           <div className="pt-2">
             {/* Screenshot Upload */}
@@ -347,18 +390,18 @@ export default function App() {
               onClearError={() => setErrorMessage(null)}
             />
 
-            {/* GENERATE SIGNAL Button */}
+            {/* GENERATE SIGNAL Button (Pearl-white & Silver Liquid Glass) */}
             {!signalResult && (
               <div className="w-full max-w-xl mx-auto px-4 mb-3">
                 <motion.button
                   whileHover={
                     imagePreview && !isAnalyzing && (!timerStatus || timerStatus.isWithin2Minutes)
-                      ? { scale: 1.02 }
+                      ? { scale: 1.015 }
                       : undefined
                   }
                   whileTap={
                     imagePreview && !isAnalyzing && (!timerStatus || timerStatus.isWithin2Minutes)
-                      ? { scale: 0.95 }
+                      ? { scale: 0.985 }
                       : undefined
                   }
                   type="button"
@@ -370,44 +413,51 @@ export default function App() {
                     timerStatus?.isVerifying ||
                     (timerStatus !== null && !timerStatus.isWithin2Minutes)
                   }
-                  className={`w-full py-3.5 px-6 rounded-2xl font-black tracking-wider uppercase font-terminal text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all duration-300 shadow-xl relative overflow-hidden ${
+                  className={`w-full py-3.5 sm:py-4 px-6 rounded-2xl font-display font-bold text-sm sm:text-base tracking-wide flex items-center justify-center gap-2.5 transition-all shadow-xl relative overflow-hidden ${
                     !imagePreview ||
                     isAnalyzing ||
                     !!errorMessage ||
                     timerStatus?.isVerifying ||
                     (timerStatus !== null && !timerStatus.isWithin2Minutes)
-                      ? 'bg-slate-900/60 text-slate-500 border border-slate-800 cursor-not-allowed opacity-60'
-                      : 'bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:via-blue-500 text-white border border-cyan-400/50 shadow-[0_0_30px_rgba(6,182,212,0.45)] cursor-pointer text-glow-white'
+                      ? 'opacity-40 cursor-not-allowed bg-slate-900/60 text-slate-400 border border-white/10'
+                      : 'glass-button-silver cursor-pointer'
                   }`}
                 >
-                  {/* Shimmer sweep beam */}
+                  {/* Subtle pearl gleam */}
                   {imagePreview && !isAnalyzing && (!timerStatus || timerStatus.isWithin2Minutes) && (
                     <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                      <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-12 animate-shimmer-sweep" />
+                      <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12 animate-shimmer-sweep" />
                     </div>
                   )}
 
                   {isAnalyzing ? (
                     <>
-                      <RotateCw className="w-4 h-4 animate-spin text-cyan-200" />
-                      <span>ANALYZING...</span>
+                      <RotateCw className="w-4 h-4 animate-spin text-slate-900" />
+                      <span>Analyzing Chart...</span>
                     </>
                   ) : timerStatus?.isVerifying ? (
                     <>
-                      <RotateCw className="w-4 h-4 animate-spin text-cyan-200" />
-                      <span>CHECKING TIMER...</span>
+                      <RotateCw className="w-4 h-4 animate-spin text-slate-900" />
+                      <span>Verifying Dhaka Timer...</span>
                     </>
                   ) : (
                     <>
-                      <Play className="w-4 h-4 fill-current text-white" />
-                      <span>GENERATE SIGNAL</span>
+                      <Play className="w-4 h-4 fill-current text-slate-950" />
+                      <span>Generate Signal</span>
                     </>
                   )}
                 </motion.button>
 
-                {imagePreview && timerStatus && !timerStatus.isWithin2Minutes && (
-                  <p className="text-center text-xs font-terminal text-rose-400 mt-1 font-semibold">
-                    ⚠️ Screenshot expired ({timerStatus.detectedTime || 'Old'}). Please upload a new one.
+                {imagePreview && timerStatus?.isVerifying && (
+                  <p className="text-center text-xs text-purple-300/80 mt-2 font-medium flex items-center justify-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                    <span>Verifying chart timer with Dhaka live time...</span>
+                  </p>
+                )}
+
+                {imagePreview && timerStatus && !timerStatus.isVerifying && timerStatus.timerFound && !timerStatus.isWithin2Minutes && (
+                  <p className="text-center text-xs text-rose-300/90 mt-2 font-medium">
+                    ⚠️ Screenshot expired ({timerStatus.detectedTime}). Please upload a new one.
                   </p>
                 )}
               </div>
@@ -430,39 +480,36 @@ export default function App() {
             {signalResult && !isAnalyzing && (
               <div className="w-full max-w-xl mx-auto px-4 mb-3">
                 {timerStatus && !timerStatus.isWithin2Minutes ? (
-                  <div className="rounded-2xl p-4 bg-rose-950/80 border border-rose-500/60 text-center font-terminal shadow-xl animate-in fade-in">
-                    <div className="flex items-center justify-center gap-2 text-rose-300 font-bold text-sm uppercase mb-1">
+                  <div className="glass-panel rounded-2xl p-4 text-center shadow-xl animate-in fade-in border-rose-500/30">
+                    <div className="flex items-center justify-center gap-2 text-rose-300 font-semibold text-sm mb-1 font-display">
                       <AlertTriangle className="w-4 h-4 text-rose-400" />
                       <span>Screenshot Expired</span>
                     </div>
-                    <p className="text-xs text-slate-300 mb-3">
+                    <p className="text-xs text-slate-300 mb-3 font-sans">
                       Timer <span className="text-rose-200 font-bold">{timerStatus.detectedTime}</span> has passed 2 min. Please take a new screenshot.
                     </p>
                     <motion.button
                       whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileTap={{ scale: 0.98 }}
                       type="button"
                       onClick={handleRequestNewScreenshot}
-                      className="w-full py-2.5 px-4 rounded-xl font-bold text-xs uppercase bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center gap-2 transition cursor-pointer shadow-lg"
+                      className="w-full py-3 px-4 rounded-xl font-display font-bold text-xs uppercase bg-rose-600/90 hover:bg-rose-500 text-white flex items-center justify-center gap-2 transition cursor-pointer shadow-lg"
                     >
                       <Camera className="w-4 h-4" />
-                      <span>TAKE NEW SCREENSHOT</span>
+                      <span>Take New Screenshot</span>
                     </motion.button>
                   </div>
                 ) : (
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.015 }}
+                    whileTap={{ scale: 0.985 }}
                     type="button"
                     onClick={executeAnalysis}
                     disabled={isAnalyzing}
-                    className="w-full py-3 px-5 rounded-2xl font-bold tracking-wider uppercase font-terminal text-sm flex items-center justify-center gap-2 transition cursor-pointer bg-slate-900/90 hover:bg-slate-800 text-cyan-300 hover:text-white border border-cyan-500/40 shadow-xl relative overflow-hidden"
+                    className="glass-panel w-full py-3.5 px-5 rounded-2xl font-display font-bold tracking-wide text-sm flex items-center justify-center gap-2.5 transition cursor-pointer text-white hover:text-purple-200 hover:border-purple-400/40 shadow-xl relative overflow-hidden"
                   >
-                    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                      <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-cyan-400/15 to-transparent skew-x-12 animate-shimmer-sweep" />
-                    </div>
-                    <RotateCw className="w-4 h-4 relative z-10 text-cyan-400" />
-                    <span className="relative z-10 text-glow-cyan">GENERATE AGAIN</span>
+                    <RotateCw className="w-4 h-4 text-purple-300" />
+                    <span>Generate Again</span>
                   </motion.button>
                 )}
               </div>
@@ -470,7 +517,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Bottom Bar: Compact Telegram Link & Footer */}
+        {/* Bottom Bar: Telegram Link & Footer */}
         <div>
           <TelegramPromoCard />
           <Footer />
